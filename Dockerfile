@@ -25,3 +25,4 @@ COPY . /app
 # Команда запуска бота
 CMD ["python", "run_bot.py"]
 
+

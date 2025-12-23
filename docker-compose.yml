@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kelyanmedia_postgres
+    restart: unless-stopped
+    environment:
+      # Параметры БД. Имена переменных совпадают с настройками из config.py / .env.example
+      POSTGRES_DB: ${DB_NAME:-kelyanmedia_auction}
+      POSTGRES_USER: ${DB_USER:-kelyanmedia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Автоматически применяем первую миграцию при инициализации БД
+      - ./database/migrations/001_create_tables.sql:/docker-entrypoint-initdb.d/001_create_tables.sql:ro
+    ports:
+      # Если внешний доступ к БД не нужен, эту строку можно удалить
+      - "5432:5432"
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kelyanmedia_bot
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      # Токен и настройки бота (из .env / переменных среды Coolify)
+      BOT_TOKEN: ${BOT_TOKEN}
+      CHANNEL_ID: ${CHANNEL_ID}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS}
+
+      # Параметры подключения к БД
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-kelyanmedia}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me}
+      DB_NAME: ${DB_NAME:-kelyanmedia_auction}
+
+      # Прочие настройки из config.py
+      AUCTION_DURATION_HOURS: ${AUCTION_DURATION_HOURS:-2.0}
+      PUBLICATION_PRICE: ${PUBLICATION_PRICE:-30000}
+
+volumes:
+  postgres_data:
+
+
