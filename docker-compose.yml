@@ -25,8 +25,9 @@ services:
     depends_on:
       - postgres
     environment:
+      # Используем всегда postgres как роль БД, чтобы не зависеть от DB_USER снаружи
       POSTGRES_DB: '${DB_NAME:-kelyanmedia_auction}'
-      POSTGRES_USER: '${DB_USER:-postgres}'
+      POSTGRES_USER: 'postgres'
       POSTGRES_PASSWORD: '${DB_PASSWORD:-change_me}'
       # Для psql, чтобы не спрашивал пароль
       PGPASSWORD: '${DB_PASSWORD:-change_me}'
