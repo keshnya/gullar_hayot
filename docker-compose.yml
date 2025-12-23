@@ -8,7 +8,8 @@ services:
     environment:
       # Параметры БД. Имена переменных совпадают с настройками из config.py / .env.example
       POSTGRES_DB: ${DB_NAME:-kelyanmedia_auction}
-      POSTGRES_USER: ${DB_USER:-kelyanmedia}
+      # По умолчанию используем postgres, как в локальном .env
+      POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -35,7 +36,8 @@ services:
       # Параметры подключения к БД
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: ${DB_USER:-kelyanmedia}
+      # Должно совпадать с POSTGRES_USER
+      DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-change_me}
       DB_NAME: ${DB_NAME:-kelyanmedia_auction}
 
