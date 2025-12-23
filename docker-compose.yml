@@ -12,7 +12,8 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Новый том, чтобы база инициализировалась с нуля
+      - postgres_data_v2:/var/lib/postgresql/data
       # Автоматически применяем первую миграцию при инициализации БД
       - ./database/migrations/001_create_tables.sql:/docker-entrypoint-initdb.d/001_create_tables.sql:ro
     ports:
@@ -46,6 +47,6 @@ services:
       PUBLICATION_PRICE: ${PUBLICATION_PRICE:-30000}
 
 volumes:
-  postgres_data:
+  postgres_data_v2:
 
 
