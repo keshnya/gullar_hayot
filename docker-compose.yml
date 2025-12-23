@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me}
     volumes:
       # Новый том, чтобы база инициализировалась с нуля
-      - postgres_data_v2:/var/lib/postgresql/data
+      - postgres_data_fresh:/var/lib/postgresql/data
       # Полная инициализация схемы при первом старте
       - ./database/migrations/all_init.sql:/docker-entrypoint-initdb.d/all_init.sql:ro
     ports:
@@ -47,6 +47,6 @@ services:
       PUBLICATION_PRICE: ${PUBLICATION_PRICE:-30000}
 
 volumes:
-  postgres_data_v2:
+  postgres_data_fresh:
 
 
