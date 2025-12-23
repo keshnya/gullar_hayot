@@ -25,11 +25,11 @@ services:
     depends_on:
       - postgres
     environment:
-      # Используем всегда postgres как роль БД, чтобы не зависеть от DB_USER снаружи
+      # База, с которой работаем
       POSTGRES_DB: '${DB_NAME:-kelyanmedia_auction}'
-      POSTGRES_USER: 'postgres'
-      POSTGRES_PASSWORD: '${DB_PASSWORD:-change_me}'
-      # Для psql, чтобы не спрашивал пароль
+      # Пароль для пользователя postgres
+      DB_MIGRATE_PASSWORD: '${DB_PASSWORD:-change_me}'
+      # PGPASSWORD читает сам psql
       PGPASSWORD: '${DB_PASSWORD:-change_me}'
     volumes:
       - './database/migrations/001_create_tables.sql:/migrations/001_create_tables.sql:ro'
@@ -43,10 +43,10 @@ services:
           sleep 2;
         done &&
         echo 'Running migrations...' &&
-        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/001_create_tables.sql &&
-        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_moderator_field.sql &&
-        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_publication_credits.sql &&
-        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/003_add_payment_metadata.sql &&
+        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/001_create_tables.sql &&
+        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_moderator_field.sql &&
+        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_publication_credits.sql &&
+        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/003_add_payment_metadata.sql &&
         echo 'Migrations completed.'
       "
 
