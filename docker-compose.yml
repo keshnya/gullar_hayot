@@ -28,6 +28,8 @@ services:
       POSTGRES_DB: '${DB_NAME:-kelyanmedia_auction}'
       POSTGRES_USER: '${DB_USER:-postgres}'
       POSTGRES_PASSWORD: '${DB_PASSWORD:-change_me}'
+      # Для psql, чтобы не спрашивал пароль
+      PGPASSWORD: '${DB_PASSWORD:-change_me}'
     volumes:
       - './database/migrations/001_create_tables.sql:/migrations/001_create_tables.sql:ro'
       - './database/migrations/002_add_moderator_field.sql:/migrations/002_add_moderator_field.sql:ro'
@@ -40,10 +42,10 @@ services:
           sleep 2;
         done &&
         echo 'Running migrations...' &&
-        psql -h postgres -p 5432 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f /migrations/001_create_tables.sql &&
-        psql -h postgres -p 5432 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f /migrations/002_add_moderator_field.sql &&
-        psql -h postgres -p 5432 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f /migrations/002_add_publication_credits.sql &&
-        psql -h postgres -p 5432 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f /migrations/003_add_payment_metadata.sql &&
+        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/001_create_tables.sql &&
+        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_moderator_field.sql &&
+        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_publication_credits.sql &&
+        psql \"postgresql://$POSTGRES_USER:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/003_add_payment_metadata.sql &&
         echo 'Migrations completed.'
       "
 
