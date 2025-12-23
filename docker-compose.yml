@@ -14,41 +14,11 @@ services:
     volumes:
       # Новый том, чтобы база инициализировалась с нуля
       - postgres_data_v2:/var/lib/postgresql/data
-      # Автоматически применяем первую миграцию при инициализации БД
-      - ./database/migrations/001_create_tables.sql:/docker-entrypoint-initdb.d/001_create_tables.sql:ro
+      # Полная инициализация схемы при первом старте
+      - ./database/migrations/all_init.sql:/docker-entrypoint-initdb.d/all_init.sql:ro
     ports:
       # Если внешний доступ к БД не нужен, эту строку можно удалить
       - "5432:5432"
-
-  migrate:
-    image: postgres:16-alpine
-    depends_on:
-      - postgres
-    environment:
-      # База, с которой работаем
-      POSTGRES_DB: '${DB_NAME:-kelyanmedia_auction}'
-      # Пароль для пользователя postgres
-      DB_MIGRATE_PASSWORD: '${DB_PASSWORD:-change_me}'
-      # PGPASSWORD читает сам psql
-      PGPASSWORD: '${DB_PASSWORD:-change_me}'
-    volumes:
-      - './database/migrations/001_create_tables.sql:/migrations/001_create_tables.sql:ro'
-      - './database/migrations/002_add_moderator_field.sql:/migrations/002_add_moderator_field.sql:ro'
-      - './database/migrations/002_add_publication_credits.sql:/migrations/002_add_publication_credits.sql:ro'
-      - './database/migrations/003_add_payment_metadata.sql:/migrations/003_add_payment_metadata.sql:ro'
-    command: >
-      sh -c "
-        echo 'Waiting for postgres...' &&
-        until pg_isready -h postgres -p 5432 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"; do
-          sleep 2;
-        done &&
-        echo 'Running migrations...' &&
-        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/001_create_tables.sql &&
-        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_moderator_field.sql &&
-        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/002_add_publication_credits.sql &&
-        psql \"postgresql://postgres:$PGPASSWORD@postgres:5432/$POSTGRES_DB\" -f /migrations/003_add_payment_metadata.sql &&
-        echo 'Migrations completed.'
-      "
 
   bot:
     build:
@@ -58,7 +28,6 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
-      - migrate
     environment:
       # Токен и настройки бота (из .env / переменных среды Coolify)
       BOT_TOKEN: ${BOT_TOKEN}
