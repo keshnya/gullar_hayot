@@ -2,7 +2,9 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
     container_name: kelyanmedia_postgres
     restart: unless-stopped
     environment:
@@ -14,8 +16,6 @@ services:
     volumes:
       # Новый том, чтобы база инициализировалась с нуля
       - postgres_data_fresh:/var/lib/postgresql/data
-      # Полная инициализация схемы при первом старте
-      - ./database/migrations/all_init.sql:/docker-entrypoint-initdb.d/all_init.sql:ro
     ports:
       # Если внешний доступ к БД не нужен, эту строку можно удалить
       - "5432:5432"
