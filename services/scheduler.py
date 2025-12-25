@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database.connection import async_session_maker
 from database.models.auction import Auction, AuctionStatus
+from database.models.regular_sale import RegularSale, SaleStatus
 from services.auction import finish_auction, get_active_auctions
 from services.channel import get_auction_status_text, send_contacts_after_auction
 from config import settings
@@ -59,6 +60,46 @@ async def check_and_finish_auctions(bot: Bot):
             
             except Exception as e:
                 logger.error(f"Ошибка при завершении аукциона {auction.id}: {e}")
+
+
+async def check_and_expire_sales(bot: Bot):
+    """Проверить и удалить кнопку у истекших обычных продаж (24 часа)"""
+    async with async_session_maker() as session:
+        now = datetime.now(timezone.utc)
+        
+        result = await session.execute(
+            select(RegularSale).where(
+                RegularSale.status == SaleStatus.ACTIVE.value,
+                RegularSale.expires_at <= now,
+                RegularSale.expires_at.isnot(None),
+                RegularSale.channel_message_id.isnot(None)
+            )
+        )
+        expired_sales = result.scalars().all()
+        
+        for sale in expired_sales:
+            try:
+                channel_message_id = sale.channel_message_id
+                
+                if channel_message_id:
+                    try:
+                        # Убираем кнопку из сообщения, не меняя текст
+                        await bot.edit_message_reply_markup(
+                            chat_id=settings.CHANNEL_ID,
+                            message_id=channel_message_id,
+                            reply_markup=None  # Убираем кнопку
+                        )
+                        logger.info(f"Кнопка удалена для продажи {sale.id} (истекло 24 часа)")
+                    except Exception as e:
+                        error_msg = str(e).lower()
+                        # Игнорируем ошибки, если сообщение уже изменено или удалено
+                        if "message to edit not found" in error_msg or "message is not modified" in error_msg:
+                            logger.debug(f"Сообщение для продажи {sale.id} не найдено или уже изменено")
+                        else:
+                            logger.warning(f"Ошибка при удалении кнопки для продажи {sale.id}: {e}")
+            
+            except Exception as e:
+                logger.error(f"Ошибка при обработке истекшей продажи {sale.id}: {e}")
 
 
 async def update_active_auctions_messages(bot: Bot):
@@ -151,6 +192,9 @@ async def scheduler_loop(bot: Bot):
         try:
             # Проверяем завершенные аукционы каждую минуту
             await check_and_finish_auctions(bot)
+            
+            # Проверяем истекшие обычные продажи каждую минуту
+            await check_and_expire_sales(bot)
             
             # Обновляем все активные аукционы каждые 15 минут
             if minutes_passed >= 15:

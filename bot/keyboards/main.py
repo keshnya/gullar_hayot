@@ -1,13 +1,15 @@
 """Основные клавиатуры"""
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from typing import Optional
 
 
 def get_main_keyboard() -> ReplyKeyboardMarkup:
     """Главная клавиатура"""
     keyboard = [
         [KeyboardButton(text="➕ Товарный аукцион")],
-        [KeyboardButton(text="➕ Выставить букет")],
+        [KeyboardButton(text="💐 Выставить букет")],
+        [KeyboardButton(text="💰 Баланс")],
         [KeyboardButton(text="🆔 Узнать свой ID")]
     ]
     return ReplyKeyboardMarkup(
@@ -66,4 +68,31 @@ def get_payment_method_keyboard() -> InlineKeyboardMarkup:
         callback_data="payment_method:click"
     ))
     return builder.as_markup()
+
+
+def get_balance_keyboard() -> InlineKeyboardMarkup:
+    """Клавиатура меню баланса"""
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(
+        text="📊 Проверить баланс",
+        callback_data="balance:check"
+    ))
+    builder.add(InlineKeyboardButton(
+        text="💳 Пополнить баланс",
+        callback_data="balance:topup:menu"
+    ))
+    return builder.as_markup()
+
+
+async def get_user_keyboard(user_id: int, session, is_admin: bool = False, is_moderator: bool = False) -> ReplyKeyboardMarkup:
+    """Получить клавиатуру для пользователя в зависимости от его прав"""
+    from bot.keyboards.admin import get_admin_keyboard, get_moderator_keyboard
+    from config import settings
+    
+    if is_admin or user_id in settings.admin_ids_list:
+        return get_admin_keyboard()
+    elif is_moderator:
+        return get_moderator_keyboard()
+    else:
+        return get_main_keyboard()
 

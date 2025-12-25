@@ -8,8 +8,7 @@ def get_moderator_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
         [KeyboardButton(text="➕ Товарный аукцион")],
         [KeyboardButton(text="💐 Выставить букет")],
-        # [KeyboardButton(text="💰 Пополнить баланс")],  # Временно закомментировано
-        # [KeyboardButton(text="📊 Мой профиль")],  # Временно закомментировано
+        [KeyboardButton(text="💰 Баланс")],
         [KeyboardButton(text="🆔 Узнать свой ID")],
         [KeyboardButton(text="👮 Модерация")]  # Кнопка модерации
     ]
@@ -24,8 +23,7 @@ def get_admin_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
         [KeyboardButton(text="➕ Товарный аукцион")],
         [KeyboardButton(text="💐 Выставить букет")],
-        # [KeyboardButton(text="💰 Пополнить баланс")],  # Временно закомментировано
-        # [KeyboardButton(text="📊 Мой профиль")],  # Временно закомментировано
+        [KeyboardButton(text="💰 Баланс")],
         [KeyboardButton(text="🆔 Узнать свой ID")],
         [KeyboardButton(text="👮 Модерация")],  # Кнопка модерации
         [KeyboardButton(text="📋 Админ панель")]  # Кнопка админ панели

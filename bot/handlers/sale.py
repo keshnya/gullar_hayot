@@ -44,7 +44,7 @@ async def handle_buy_interest(callback: CallbackQuery, session: AsyncSession):
         callback.from_user.last_name
     )
     
-    # Отправляем контакты продавца покупателю
+    # Отправляем контакты продавца покупателю в личные сообщения
     contact_text = (
         f"📞 Контакты продавца для товара '{product.title}':\n\n"
     )
@@ -58,8 +58,21 @@ async def handle_buy_interest(callback: CallbackQuery, session: AsyncSession):
     
     contact_text += f"\nЦена: {sale.price:,} сум"
     
-    await callback.message.answer(contact_text)
-    await callback.answer("Контакты отправлены ✅")
+    # Отправляем в ЛС покупателя, а не в канал
+    try:
+        from config import settings
+        from aiogram import Bot
+        bot = Bot(token=settings.BOT_TOKEN)
+        await bot.send_message(
+            chat_id=buyer.telegram_id,
+            text=contact_text
+        )
+        await bot.session.close()
+        await callback.answer("Контакты отправлены в личные сообщения ✅")
+    except Exception as e:
+        import logging
+        logging.error(f"Ошибка при отправке контактов покупателю: {e}")
+        await callback.answer("Ошибка при отправке контактов", show_alert=True)
     
     # Уведомляем продавца о заинтересованном покупателе
     buyer_info = (

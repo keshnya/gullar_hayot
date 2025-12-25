@@ -471,35 +471,138 @@ async def handle_payment_moderation(
         )
 
 
+async def send_pending_payments(
+    message: Message,
+    session: AsyncSession,
+):
+    """Отправить модератору список платежей на модерации"""
+    # Получаем все платежи на модерации (публикации)
+    result = await session.execute(
+        select(Payment, User)
+        .join(User, Payment.user_id == User.id)
+        .where(
+            Payment.status == PaymentStatus.PENDING.value,
+            Payment.payment_type == PaymentType.PUBLICATION.value
+        )
+        .order_by(Payment.created_at.desc())
+    )
+    pending_payments = result.all()
+    
+    if not pending_payments:
+        # Если нет платежей, просто возвращаемся
+        return
+    
+    await message.answer("💳 <b>Платежи на модерации:</b>", parse_mode="HTML")
+    
+    for payment, user in pending_payments:
+        # Парсим количество публикаций из metadata
+        credits = 1
+        if payment.payment_metadata:
+            try:
+                # Формат: "credits=3"
+                if "credits=" in payment.payment_metadata:
+                    credits = int(payment.payment_metadata.split("credits=")[1].split()[0])
+            except:
+                pass
+        
+        text = (
+            f"🧾 Платёж #{payment.id}\n\n"
+            f"Пользователь: @{user.username if user.username else f'ID: {user.telegram_id}'}\n"
+            f"ID пользователя: {user.id}\n"
+            f"Количество публикаций: {credits}\n"
+            f"Сумма: {payment.amount:,} сум\n"
+            f"ID платежа: {payment.id}\n\n"
+            "Подтвердить оплату?"
+        )
+        
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="✅ Подтвердить оплату",
+                        callback_data=f"payment:approve:{payment.id}:{credits}",
+                    ),
+                    InlineKeyboardButton(
+                        text="❌ Отклонить",
+                        callback_data=f"payment:reject:{payment.id}",
+                    ),
+                ]
+            ]
+        )
+        
+        await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
 
 async def send_moderation_notification(
     bot,
     session: AsyncSession,
     product_id: int,
 ):
-    """Отправить уведомление о новом товаре на модерацию (кратко)"""
+    """Отправить уведомление о новом товаре на модерацию с кнопками подтверждения/отклонения"""
     result = await session.execute(
-        select(Product).where(Product.id == product_id)
+        select(Product, User).join(User, Product.user_id == User.id).where(Product.id == product_id)
     )
-    product = result.scalar_one_or_none()
+    data = result.first()
 
-    if not product:
+    if not data:
         return
 
-    text = (
-        f"🆕 Новый товар на модерацию\n\n"
-        f"ID: {product.id}\n"
-        f"Название: {product.title}\n"
-        f"Цена: {product.price:,} сум\n\n"
-        "Откройте меню бота и нажмите кнопку "
-        "<b>👮 Модерация</b>, чтобы просмотреть и обработать товары."
+    product, user = data
+    
+    # Формируем полный текст товара
+    text = await _build_product_text(session, product_id, status_text="На модерации")
+    
+    # Создаем кнопки подтверждения/отклонения
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Одобрить",
+                    callback_data=f"moderation:approve:{product_id}",
+                ),
+                InlineKeyboardButton(
+                    text="❌ Отклонить",
+                    callback_data=f"moderation:reject:{product_id}",
+                ),
+            ]
+        ]
     )
 
+    # Отправляем всем администраторам
     for admin_id in settings.admin_ids_list:
         try:
+            # Пытаемся отправить фото, если есть
+            if product.photos:
+                try:
+                    photos = json.loads(product.photos)
+                except Exception:
+                    photos = []
+
+                if photos:
+                    # Сначала отправляем все фото без подписи,
+                    # под последней картинкой — полное описание товара с кнопками
+                    last_index = len(photos) - 1
+                    for idx, photo_id in enumerate(photos):
+                        if idx == last_index:
+                            await bot.send_photo(
+                                chat_id=admin_id,
+                                photo=photo_id,
+                                caption=text,
+                                reply_markup=kb,
+                                parse_mode="HTML",
+                            )
+                        else:
+                            await bot.send_photo(
+                                chat_id=admin_id,
+                                photo=photo_id,
+                            )
+                    continue
+
+            # Если фото нет или ошибка парсинга
             await bot.send_message(
                 admin_id,
                 text,
+                reply_markup=kb,
                 parse_mode="HTML",
             )
         except Exception as e:

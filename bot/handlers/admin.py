@@ -56,14 +56,18 @@ async def cmd_moderation_button(message: Message, session: AsyncSession):
 
 @router.message(Command("moderation"))
 async def cmd_moderation(message: Message, session: AsyncSession):
-    """Показать товары на модерации"""
+    """Показать товары и платежи на модерации"""
     if not await is_admin_or_moderator(message.from_user.id, session):
         await message.answer("У вас нет прав для модерации")
         return
 
-    # Используем новый постраничный вывод в handlers.moderation
+    # Показываем товары на модерации
     from bot.handlers.moderation import send_moderation_page
     await send_moderation_page(message, session, page=1)
+    
+    # Показываем платежи на модерации
+    from bot.handlers.moderation import send_pending_payments
+    await send_pending_payments(message, session)
 
 
 @router.message(F.text == "📋 Админ панель")

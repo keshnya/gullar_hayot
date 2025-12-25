@@ -299,13 +299,23 @@ async def place_bid_quick(callback: CallbackQuery, session: AsyncSession):
         product_data = product_result.first()
 
         await callback.answer(f"Ставка {amount:,} сум принята! ✅")
-        # Отправляем явное сообщение пользователю
+        # Отправляем явное сообщение пользователю с reply-клавиатурой
+        from bot.keyboards.main import get_user_keyboard
+        from bot.handlers.admin import is_admin_or_moderator
+        from config import settings
+        
+        user_id = callback.from_user.id
+        is_admin = user_id in settings.admin_ids_list
+        is_moderator = await is_admin_or_moderator(user_id, session)
+        reply_keyboard = await get_user_keyboard(user_id, session, is_admin, is_moderator)
+        
         await callback.bot.send_message(
             chat_id=callback.from_user.id,
             text=(
                 f"✅ Ваша ставка {amount:,} сум принята.\n"
                 f"Текущая цена лота: {auction.current_price:,} сум."
             ),
+            reply_markup=reply_keyboard
         )
 
         if product_data:
@@ -393,13 +403,23 @@ async def place_bid_amount(callback: CallbackQuery, session: AsyncSession):
         product_data = product_result.first()
 
         await callback.answer(f"Ставка {amount:,} сум принята! ✅")
-        # Отправляем явное сообщение пользователю
+        # Отправляем явное сообщение пользователю с reply-клавиатурой
+        from bot.keyboards.main import get_user_keyboard
+        from bot.handlers.admin import is_admin_or_moderator
+        from config import settings
+        
+        user_id = callback.from_user.id
+        is_admin = user_id in settings.admin_ids_list
+        is_moderator = await is_admin_or_moderator(user_id, session)
+        reply_keyboard = await get_user_keyboard(user_id, session, is_admin, is_moderator)
+        
         await callback.bot.send_message(
             chat_id=callback.from_user.id,
             text=(
                 f"✅ Ваша ставка {amount:,} сум принята.\n"
                 f"Текущая цена лота: {auction.current_price:,} сум."
             ),
+            reply_markup=reply_keyboard
         )
 
         if product_data:
@@ -586,9 +606,20 @@ async def process_bid_amount(message: Message, session: AsyncSession, state: FSM
             )
             product_data = product_result.first()
 
+            # Получаем reply-клавиатуру для пользователя
+            from bot.keyboards.main import get_user_keyboard
+            from bot.handlers.admin import is_admin_or_moderator
+            from config import settings
+            
+            user_id = message.from_user.id
+            is_admin = user_id in settings.admin_ids_list
+            is_moderator = await is_admin_or_moderator(user_id, session)
+            reply_keyboard = await get_user_keyboard(user_id, session, is_admin, is_moderator)
+
             await message.answer(
                 f"✅ Ваша ставка {amount:,} сум принята.\n"
-                "Вы пока в лидерах."
+                "Вы пока в лидерах.",
+                reply_markup=reply_keyboard
             )
 
             if product_data:

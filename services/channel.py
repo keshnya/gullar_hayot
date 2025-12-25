@@ -428,14 +428,16 @@ async def publish_sale_to_channel(
         )
         channel_message_id = message.message_id
     
-    # Обновляем статус продажи и сохраняем ID сообщения
+    # Обновляем статус продажи, сохраняем ID сообщения и устанавливаем время истечения (24 часа)
     from sqlalchemy import update
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
     await session.execute(
         update(RegularSale)
         .where(RegularSale.id == sale.id)
         .values(
             status=SaleStatus.ACTIVE.value,
-            channel_message_id=channel_message_id
+            channel_message_id=channel_message_id,
+            expires_at=expires_at
         )
     )
     await session.commit()

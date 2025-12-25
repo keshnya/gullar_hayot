@@ -26,6 +26,7 @@ class RegularSale(Base):
     channel_message_id = Column(BigInteger, nullable=True)  # ID сообщения в канале
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     sold_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # Время истечения продажи (24 часа с момента публикации)
     
     # Связи
     product = relationship("Product", back_populates="regular_sale")
