@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 from database.models.regular_sale import RegularSale, SaleStatus
 from database.models.product import Product
 from database.models.user import User
+from database.models.sale_interest import SaleInterest
 from services.user import get_or_create_user
 from config import settings
 
@@ -48,6 +49,21 @@ async def handle_buy_interest(callback: CallbackQuery, session: AsyncSession):
         callback.from_user.first_name,
         callback.from_user.last_name
     )
+    
+    # Проверяем, не нажимал ли покупатель уже на эту продажу
+    existing_interest = await session.execute(
+        select(SaleInterest)
+        .where(SaleInterest.sale_id == sale_id)
+        .where(SaleInterest.buyer_id == buyer.id)
+    )
+    if existing_interest.scalar_one_or_none():
+        await callback.answer("Вы уже отправляли запрос на этот товар", show_alert=True)
+        return
+    
+    # Записываем интерес покупателя
+    new_interest = SaleInterest(sale_id=sale_id, buyer_id=buyer.id)
+    session.add(new_interest)
+    await session.commit()
     
     # Уведомляем продавца о заинтересованном покупателе с его контактами
     buyer_info = (

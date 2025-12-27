@@ -6,6 +6,7 @@ from .regular_sale import RegularSale
 from .bid import Bid
 from .payment import Payment
 from .moderation import ModerationQueue
+from .sale_interest import SaleInterest
 
 __all__ = [
     "User",
@@ -15,5 +16,6 @@ __all__ = [
     "Bid",
     "Payment",
     "ModerationQueue",
+    "SaleInterest",
 ]
 
