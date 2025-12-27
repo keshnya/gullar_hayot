@@ -335,7 +335,7 @@ async def publish_sale_to_channel(
     session: AsyncSession,
     product_id: int
 ) -> int:
-    """Опубликовать обычную продажу в канал"""
+    """Опубликовать обычную продажу в канал (только первое фото с кнопкой)"""
     # Получаем товар и продажу
     result = await session.execute(
         select(Product, RegularSale, User)
@@ -369,29 +369,8 @@ async def publish_sale_to_channel(
     text += f"📞 Контакты: {product.contact_info or 'Не указано'}\n"
     text += f"👤 Продавец: @{user.username if user.username else f'ID: {user.telegram_id}'}"
     
-    # Загружаем фото
+    # Загружаем фото - берем только первое
     photos = json.loads(product.photos) if product.photos else []
-    media_group = []
-    
-    if photos:
-        # Telegram ограничивает caption до 1024 символов
-        caption_text = text
-        if len(caption_text) > 1000:
-            caption_text = caption_text[:1000] + "…"
-
-        for i, photo_id in enumerate(photos[:10]):
-            if i == 0:
-                media_group.append({
-                    "type": "photo",
-                    "media": photo_id,
-                    "caption": caption_text,
-                    "parse_mode": "HTML"
-                })
-            else:
-                media_group.append({
-                    "type": "photo",
-                    "media": photo_id
-                })
     
     # Создаем клавиатуру для покупки
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -403,17 +382,18 @@ async def publish_sale_to_channel(
         ]
     ])
     
-    # Публикуем в канал
-    if media_group:
-        # Если есть фото, отправляем медиа-группу
-        messages = await bot.send_media_group(
+    # Публикуем в канал - только первое фото с кнопкой
+    if photos:
+        # Telegram ограничивает caption до 1024 символов
+        caption_text = text
+        if len(caption_text) > 1000:
+            caption_text = caption_text[:1000] + "…"
+        
+        # Отправляем одно фото с caption и кнопкой
+        message = await bot.send_photo(
             chat_id=settings.CHANNEL_ID,
-            media=media_group
-        )
-        # Отправляем отдельное сообщение с кнопками
-        message = await bot.send_message(
-            chat_id=settings.CHANNEL_ID,
-            text="🛒 <b>Хотите купить?</b>",
+            photo=photos[0],
+            caption=caption_text,
             reply_markup=keyboard,
             parse_mode="HTML"
         )
@@ -441,6 +421,28 @@ async def publish_sale_to_channel(
         )
     )
     await session.commit()
+    
+    # Отправляем продавцу кнопку "Отметить как продано"
+    seller_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✅ Отметить как продано",
+                callback_data=f"sale:sold:{sale.id}"
+            )
+        ]
+    ])
+    
+    try:
+        await bot.send_message(
+            chat_id=user.telegram_id,
+            text=(
+                f"✅ Ваше объявление '{product.title}' опубликовано!\n\n"
+                f"Когда товар будет продан, нажмите кнопку ниже:"
+            ),
+            reply_markup=seller_keyboard
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при отправке кнопки продавцу: {e}")
     
     return channel_message_id
 
